@@ -17,9 +17,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GenAILiveClient } from "../lib/genai-live-client";
 import { LiveClientOptions } from "../types";
-import { AudioStreamer } from "../lib/audio-streamer";
-import { audioContext } from "../lib/utils";
-import VolMeterWorket from "../lib/worklets/vol-meter";
+// Audio imports disabled for translation service
+// import { AudioStreamer } from "../lib/audio-streamer";
+// import { audioContext } from "../lib/utils";
+// import VolMeterWorket from "../lib/worklets/vol-meter";
 import { LiveConnectConfig } from "@google/genai";
 
 export type UseLiveAPIResults = {
@@ -36,28 +37,29 @@ export type UseLiveAPIResults = {
 
 export function useLiveAPI(options: LiveClientOptions): UseLiveAPIResults {
   const client = useMemo(() => new GenAILiveClient(options), [options]);
-  const audioStreamerRef = useRef<AudioStreamer | null>(null);
+  // Audio streamer disabled for translation service
+  // const audioStreamerRef = useRef<AudioStreamer | null>(null);
 
   const [model, setModel] = useState<string>("models/gemini-2.0-flash-exp");
   const [config, setConfig] = useState<LiveConnectConfig>({});
   const [connected, setConnected] = useState(false);
-  const [volume, setVolume] = useState(0);
+  const [volume] = useState(0); // Volume monitoring disabled for translation service
 
-  // register audio for streaming server -> speakers
-  useEffect(() => {
-    if (!audioStreamerRef.current) {
-      audioContext({ id: "audio-out" }).then((audioCtx: AudioContext) => {
-        audioStreamerRef.current = new AudioStreamer(audioCtx);
-        audioStreamerRef.current
-          .addWorklet<any>("vumeter-out", VolMeterWorket, (ev: any) => {
-            setVolume(ev.data.volume);
-          })
-          .then(() => {
-            // Successfully added worklet
-          });
-      });
-    }
-  }, [audioStreamerRef]);
+  // Audio streaming disabled - translation service doesn't need audio output
+  // useEffect(() => {
+  //   if (!audioStreamerRef.current) {
+  //     audioContext({ id: "audio-out" }).then((audioCtx: AudioContext) => {
+  //       audioStreamerRef.current = new AudioStreamer(audioCtx);
+  //       audioStreamerRef.current
+  //         .addWorklet<any>("vumeter-out", VolMeterWorket, (ev: any) => {
+  //           setVolume(ev.data.volume);
+  //         })
+  //         .then(() => {
+  //           // Successfully added worklet
+  //         });
+  //     });
+  //   }
+  // }, [audioStreamerRef]);
 
   useEffect(() => {
     const onOpen = () => {
@@ -72,16 +74,16 @@ export function useLiveAPI(options: LiveClientOptions): UseLiveAPIResults {
       console.error("error", error);
     };
 
-    const stopAudioStreamer = () => audioStreamerRef.current?.stop();
-
-    const onAudio = (data: ArrayBuffer) =>
-      audioStreamerRef.current?.addPCM16(new Uint8Array(data));
+    // Audio processing completely disabled for translation service
+    const onAudio = (data: ArrayBuffer) => {
+      // Silently ignore all incoming audio data - no processing, no output
+    };
 
     client
       .on("error", onError)
       .on("open", onOpen)
       .on("close", onClose)
-      .on("interrupted", stopAudioStreamer)
+      .on("interrupted", () => {}) // No audio streamer to stop
       .on("audio", onAudio);
 
     return () => {
@@ -89,7 +91,7 @@ export function useLiveAPI(options: LiveClientOptions): UseLiveAPIResults {
         .off("error", onError)
         .off("open", onOpen)
         .off("close", onClose)
-        .off("interrupted", stopAudioStreamer)
+        .off("interrupted", () => {}) // No audio streamer to clean up
         .off("audio", onAudio)
         .disconnect();
     };
